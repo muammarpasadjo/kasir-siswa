@@ -210,6 +210,89 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> deleteProductById(int id) =>
       (delete(products)..where((t) => t.id.equals(id))).go();
+
+  // ===== Transaksi Penjualan =====
+  Future<String> nextInvoiceNo() async {
+    final now = DateTime.now();
+    final ymd =
+        '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+    final count = await (select(sales)).get();
+    final seq = (count.length + 1).toString().padLeft(4, '0');
+    return 'INV$ymd-$seq';
+  }
+
+  /// Simpan transaksi: insert Sale + SaleItems, kurangi stok. Mengembalikan Sale.
+  Future<Sale> createSale({
+    required int userId,
+    required String invoiceNo,
+    required double subtotal,
+    required double tax,
+    required double total,
+    required double paid,
+    required double change,
+    int? memberId,
+    required List<({int productId, double qty, double price, double cost})> items,
+  }) async {
+    return transaction(() async {
+      final saleId = await into(sales).insert(SalesCompanion.insert(
+        invoiceNo: invoiceNo,
+        userId: userId,
+        memberId: Value(memberId),
+        subtotal: Value(subtotal),
+        tax: Value(tax),
+        total: Value(total),
+        paid: Value(paid),
+        change: Value(change),
+      ));
+      for (final it in items) {
+        await into(saleItems).insert(SaleItemsCompanion.insert(
+          saleId: saleId,
+          productId: it.productId,
+          qty: it.qty,
+          price: it.price,
+          cost: Value(it.cost),
+          subtotal: it.price * it.qty,
+        ));
+        // Kurangi stok
+        final prod = await (select(products)..where((p) => p.id.equals(it.productId)))
+            .getSingleOrNull();
+        if (prod != null) {
+          await (update(products)..where((p) => p.id.equals(it.productId)))
+              .write(ProductsCompanion(stock: Value(prod.stock - it.qty)));
+        }
+      }
+      return (select(sales)..where((s) => s.id.equals(saleId))).getSingle();
+    });
+  }
+
+  Future<List<Sale>> getSales({int limit = 100}) =>
+      (select(sales)
+            ..orderBy([(s) => OrderingTerm.desc(s.createdAt)])
+            ..limit(limit))
+          .get();
+
+  Future<List<SaleItem>> getSaleItems(int saleId) =>
+      (select(saleItems)..where((i) => i.saleId.equals(saleId))).get();
+
+  /// Ringkasan penjualan hari ini.
+  Future<({int count, double total})> todaySummary() async {
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, now.day);
+    final rows = await (select(sales)
+          ..where((s) => s.createdAt.isBiggerOrEqualValue(start)))
+        .get();
+    final total = rows.fold<double>(0, (sum, s) => sum + s.total);
+    return (count: rows.length, total: total);
+  }
+
+  // ===== Member =====
+  Future<List<Member>> getMembers() => select(members).get();
+
+  Future<int> upsertMember(MembersCompanion m) =>
+      into(members).insertOnConflictUpdate(m);
+
+  Future<void> deleteMemberById(int id) =>
+      (delete(members)..where((t) => t.id.equals(id))).go();
 }
 
 LazyDatabase _open() {

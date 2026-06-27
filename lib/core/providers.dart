@@ -82,3 +82,58 @@ final themeProvider =
 final categoriesProvider = FutureProvider<List<Category>>((ref) {
   return ref.watch(databaseProvider).getCategories();
 });
+/// Path logo aplikasi (file) — bisa diganti admin. null = pakai default.
+class LogoController extends StateNotifier<String?> {
+  LogoController(this._db) : super(null) {
+    _load();
+  }
+  final AppDatabase _db;
+  Future<void> _load() async {
+    state = await _db.getSetting('logo_path');
+  }
+  Future<void> setLogo(String? path) async {
+    state = path;
+    await _db.setSetting('logo_path', path ?? '');
+  }
+}
+
+final logoProvider =
+    StateNotifierProvider<LogoController, String?>((ref) {
+  return LogoController(ref.watch(databaseProvider));
+});
+
+/// Apakah pajak diaktifkan secara default (admin bisa atur). Default: mati.
+class TaxController extends StateNotifier<bool> {
+  TaxController(this._db) : super(false) {
+    _load();
+  }
+  final AppDatabase _db;
+  Future<void> _load() async {
+    state = (await _db.getSetting('tax_enabled')) == '1';
+  }
+  Future<void> setEnabled(bool v) async {
+    state = v;
+    await _db.setSetting('tax_enabled', v ? '1' : '0');
+  }
+}
+
+final taxEnabledProvider =
+    StateNotifierProvider<TaxController, bool>((ref) {
+  return TaxController(ref.watch(databaseProvider));
+});
+
+/// Riwayat penjualan.
+final salesProvider = FutureProvider<List<Sale>>((ref) {
+  return ref.watch(databaseProvider).getSales();
+});
+
+/// Daftar member.
+final membersProvider = FutureProvider<List<Member>>((ref) {
+  return ref.watch(databaseProvider).getMembers();
+});
+
+/// Ringkasan penjualan hari ini.
+final todaySummaryProvider =
+    FutureProvider<({int count, double total})>((ref) {
+  return ref.watch(databaseProvider).todaySummary();
+});

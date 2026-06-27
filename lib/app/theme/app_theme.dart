@@ -10,6 +10,19 @@ class AppTheme {
     return base.copyWith(
       scaffoldBackgroundColor: b == Brightness.light ? AppColors.bg : null,
       colorScheme: base.colorScheme.copyWith(primary: AppColors.primary),
+      textTheme: base.textTheme.apply(fontFamily: 'Roboto').copyWith(
+        titleLarge: const TextStyle(fontWeight: FontWeight.w600),
+        titleMedium: const TextStyle(fontWeight: FontWeight.w500),
+        bodyLarge: const TextStyle(fontWeight: FontWeight.w400),
+        bodyMedium: const TextStyle(fontWeight: FontWeight.w400),
+      ),
+      appBarTheme: const AppBarTheme(
+        titleTextStyle: TextStyle(
+            color: AppColors.textDark,
+            fontSize: 20,
+            fontWeight: FontWeight.w600),
+        iconTheme: IconThemeData(color: AppColors.textDark),
+      ),
       // Target sentuh lebih besar.
       visualDensity: VisualDensity.comfortable,
       cardTheme: CardThemeData(
@@ -23,7 +36,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           minimumSize: const Size(64, 60), // tinggi tombol besar
-          textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         ),

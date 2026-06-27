@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../app/theme/app_colors.dart';
+import '../../widgets/app_logo.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -47,14 +48,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircleAvatar(
-                  radius: 36,
-                  backgroundColor: AppColors.primary,
-                  child: const Icon(Icons.point_of_sale, color: Colors.white, size: 40),
-                ),
+                const AppLogo(size: 84, radius: 20),
                 const SizedBox(height: 18),
                 const Text('Kasir Siswa',
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
                 const Text('Masuk untuk memulai',
                     style: TextStyle(color: AppColors.textMuted, fontSize: 16)),
@@ -110,6 +107,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 14),
                 const Text('Default: admin / admin123',
                     style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                const SizedBox(height: 6),
+                const Text('Tekan F11 untuk layar penuh / keluar',
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
               ],
             ),
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 import 'app/theme/app_theme.dart';
@@ -20,6 +21,16 @@ void main() async {
     await windowManager.show();
     await windowManager.focus();
   });
+
+  // Shortcut global F11: toggle layar penuh (berlaku sejak sebelum login).
+  HardwareKeyboard.instance.addHandler((KeyEvent event) {
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.f11) {
+      windowManager.isFullScreen().then((fs) => windowManager.setFullScreen(!fs));
+      return true;
+    }
+    return false;
+  });
+
   runApp(const ProviderScope(child: KasirSiswaApp()));
 }
 

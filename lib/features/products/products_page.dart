@@ -1,15 +1,16 @@
+import 'dart:io';
 import 'package:drift/drift.dart' show Value;
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme/app_colors.dart';
 import '../../core/providers.dart';
 import '../../core/database/database.dart';
 
+String rp(num v) => 'Rp ${v.round().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
+
 class ProductsPage extends ConsumerWidget {
   const ProductsPage({super.key});
-
-  String rp(num v) =>
-      'Rp ${v.round().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -18,20 +19,21 @@ class ProductsPage extends ConsumerWidget {
       backgroundColor: AppColors.bg,
       appBar: AppBar(
         title: const Text('Master Produk',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+            style: TextStyle(fontWeight: FontWeight.w600)),
         backgroundColor: AppColors.surface,
         actions: [
           Padding(
             padding: const EdgeInsets.all(12),
-            child: ElevatedButton.icon(
+            child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                minimumSize: const Size(56, 52),
+                minimumSize: const Size(0, 50),
+                padding: const EdgeInsets.symmetric(horizontal: 22),
+                textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
               onPressed: () => _openForm(context, ref),
-              icon: const Icon(Icons.add),
-              label: const Text('Tambah Produk'),
+              child: const Text('Tambah Produk'),
             ),
           ),
         ],
@@ -49,34 +51,30 @@ class ProductsPage extends ConsumerWidget {
                   final p = items[i];
                   return Card(
                     child: ListTile(
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                      leading: CircleAvatar(
-                        backgroundColor: AppColors.primaryLight,
-                        child: Icon(Icons.inventory_2, color: AppColors.primary),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                      leading: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: (p.imagePath != null && p.imagePath!.isNotEmpty && File(p.imagePath!).existsSync())
+                            ? Image.file(File(p.imagePath!), width: 48, height: 48, fit: BoxFit.cover)
+                            : Container(
+                                width: 48, height: 48,
+                                color: AppColors.primaryLight,
+                                child: Icon(Icons.inventory_2, color: AppColors.primary)),
                       ),
-                      title: Text(p.name,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: 17)),
-                      subtitle: Text(
-                          'Stok: ${p.stock.toStringAsFixed(0)}  •  Modal: ${rp(p.costPrice)}'),
+                      title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                      subtitle: Text('Stok: ${p.stock.toStringAsFixed(0)}  •  Modal: ${rp(p.costPrice)}'),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(rp(p.sellPrice),
-                              style: TextStyle(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 17)),
+                              style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 16)),
                           const SizedBox(width: 12),
                           IconButton(
                             icon: const Icon(Icons.edit, color: AppColors.textMuted),
-                            onPressed: () => _openForm(context, ref, product: p),
-                          ),
+                            onPressed: () => _openForm(context, ref, product: p)),
                           IconButton(
                             icon: const Icon(Icons.delete, color: AppColors.danger),
-                            onPressed: () => _confirmDelete(context, ref, p),
-                          ),
+                            onPressed: () => _confirmDelete(context, ref, p)),
                         ],
                       ),
                     ),
@@ -87,17 +85,14 @@ class ProductsPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _confirmDelete(
-      BuildContext context, WidgetRef ref, Product p) async {
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref, Product p) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Hapus Produk'),
         content: Text('Yakin menghapus "${p.name}"?'),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
           ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
               onPressed: () => Navigator.pop(context, true),
@@ -112,10 +107,7 @@ class ProductsPage extends ConsumerWidget {
   }
 
   void _openForm(BuildContext context, WidgetRef ref, {Product? product}) {
-    showDialog(
-      context: context,
-      builder: (_) => ProductFormDialog(product: product),
-    );
+    showDialog(context: context, builder: (_) => ProductFormDialog(product: product));
   }
 }
 
@@ -133,6 +125,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   late final TextEditingController _sell;
   late final TextEditingController _stock;
   late final TextEditingController _minStock;
+  String? _imagePath;
   String? _error;
 
   @override
@@ -145,6 +138,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _sell = TextEditingController(text: p?.sellPrice.toStringAsFixed(0) ?? '');
     _stock = TextEditingController(text: p?.stock.toStringAsFixed(0) ?? '0');
     _minStock = TextEditingController(text: p?.minStock.toStringAsFixed(0) ?? '0');
+    _imagePath = p?.imagePath;
   }
 
   @override
@@ -153,6 +147,13 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       c.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final res = await FilePicker.platform.pickFiles(type: FileType.image, withData: false);
+    if (res != null && res.files.single.path != null) {
+      setState(() => _imagePath = res.files.single.path);
+    }
   }
 
   Future<void> _save() async {
@@ -169,6 +170,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       sellPrice: Value(double.tryParse(_sell.text) ?? 0),
       stock: Value(double.tryParse(_stock.text) ?? 0),
       minStock: Value(double.tryParse(_minStock.text) ?? 0),
+      imagePath: Value(_imagePath),
       categoryId: widget.product == null ? const Value(1) : Value(widget.product!.categoryId),
       unitId: widget.product == null ? const Value(1) : Value(widget.product!.unitId),
     );
@@ -177,19 +179,16 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     if (mounted) Navigator.pop(context);
   }
 
-  Widget _field(String label, TextEditingController c,
-          {bool number = false}) =>
-      Padding(
+  Widget _field(String label, TextEditingController c, {bool number = false}) => Padding(
         padding: const EdgeInsets.only(bottom: 14),
         child: TextField(
           controller: c,
           keyboardType: number ? TextInputType.number : TextInputType.text,
-          style: const TextStyle(fontSize: 17),
+          style: const TextStyle(fontSize: 16),
           decoration: InputDecoration(
             labelText: label,
             border: const OutlineInputBorder(),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
           ),
         ),
       );
@@ -204,6 +203,31 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Foto produk
+              Row(children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: (_imagePath != null && _imagePath!.isNotEmpty && File(_imagePath!).existsSync())
+                      ? Image.file(File(_imagePath!), width: 84, height: 84, fit: BoxFit.cover)
+                      : Container(
+                          width: 84, height: 84,
+                          color: AppColors.bg,
+                          child: const Icon(Icons.image, color: AppColors.textMuted, size: 34)),
+                ),
+                const SizedBox(width: 16),
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  OutlinedButton.icon(
+                    onPressed: _pickImage,
+                    icon: const Icon(Icons.upload, size: 18),
+                    label: const Text('Upload Foto'),
+                  ),
+                  if (_imagePath != null && _imagePath!.isNotEmpty)
+                    TextButton(
+                        onPressed: () => setState(() => _imagePath = null),
+                        child: const Text('Hapus Foto')),
+                ]),
+              ]),
+              const SizedBox(height: 16),
               _field('Nama Produk', _name),
               _field('Barcode (opsional)', _barcode),
               Row(children: [
@@ -223,12 +247,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
         ),
       ),
       actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal')),
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
         ElevatedButton(
-          style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
           onPressed: _save,
           child: const Text('Simpan'),
         ),
