@@ -2,26 +2,41 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
 class AppTheme {
-  static ThemeData light() {
-    final base = ThemeData.light(useMaterial3: true);
+  // Skema dasar dengan komponen besar agar nyaman untuk layar sentuh.
+  static ThemeData _build(Brightness b) {
+    final base = b == Brightness.light
+        ? ThemeData.light(useMaterial3: true)
+        : ThemeData.dark(useMaterial3: true);
     return base.copyWith(
-      scaffoldBackgroundColor: AppColors.bg,
-      colorScheme: base.colorScheme.copyWith(
-        primary: AppColors.primary,
-        surface: AppColors.surface,
-      ),
+      scaffoldBackgroundColor: b == Brightness.light ? AppColors.bg : null,
+      colorScheme: base.colorScheme.copyWith(primary: AppColors.primary),
+      // Target sentuh lebih besar.
+      visualDensity: VisualDensity.comfortable,
       cardTheme: CardThemeData(
         elevation: 0,
-        color: AppColors.surface,
+        color: b == Brightness.light ? AppColors.surface : null,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.border),
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: b == Brightness.light ? AppColors.border : Colors.white12),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          minimumSize: const Size(64, 60), // tinggi tombol besar
+          textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          minimumSize: const Size(52, 52), // area sentuh ikon
+          iconSize: 28,
         ),
       ),
     );
   }
 
-  static ThemeData dark() => ThemeData.dark(useMaterial3: true).copyWith(
-        colorScheme: ThemeData.dark().colorScheme.copyWith(primary: AppColors.primary),
-      );
+  static ThemeData light() => _build(Brightness.light);
+  static ThemeData dark() => _build(Brightness.dark);
 }

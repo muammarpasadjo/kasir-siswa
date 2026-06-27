@@ -1,8 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 import 'app/theme/app_theme.dart';
 import 'app/theme/app_colors.dart';
 
-void main() => runApp(const KasirSiswaApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await windowManager.ensureInitialized();
+  const opts = WindowOptions(
+    size: Size(1440, 900),
+    minimumSize: Size(1100, 700),
+    center: true,
+    title: 'Kasir Siswa',
+    titleBarStyle: TitleBarStyle.normal,
+  );
+  await windowManager.waitUntilReadyToShow(opts, () async {
+    await windowManager.maximize(); // mulai termaksimalkan
+    await windowManager.show();
+    await windowManager.focus();
+  });
+  runApp(const KasirSiswaApp());
+}
 
 class KasirSiswaApp extends StatelessWidget {
   const KasirSiswaApp({super.key});
@@ -18,7 +35,6 @@ class KasirSiswaApp extends StatelessWidget {
   }
 }
 
-/// Model produk sementara (akan diganti dengan data dari database).
 class Product {
   final String name;
   final int price;
@@ -38,6 +54,8 @@ class PosShell extends StatefulWidget {
 }
 
 class _PosShellState extends State<PosShell> {
+  bool _fullscreen = false;
+
   final products = const [
     Product('Indomie Goreng', 3500),
     Product('Aqua 600ml', 4000),
@@ -54,6 +72,12 @@ class _PosShellState extends State<PosShell> {
   ];
   final List<CartItem> cart = [];
 
+  Future<void> _toggleFullscreen() async {
+    _fullscreen = !_fullscreen;
+    await windowManager.setFullScreen(_fullscreen);
+    setState(() {});
+  }
+
   void addToCart(Product p) {
     setState(() {
       final found = cart.where((c) => c.product.name == p.name);
@@ -69,8 +93,9 @@ class _PosShellState extends State<PosShell> {
   int get tax => (subtotal * 0.11).round();
   int get total => subtotal + tax;
 
-  String rp(int v) => 'Rp ' + v.toString().replaceAllMapped(
-      RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.');
+  String rp(int v) => 'Rp ' +
+      v.toString().replaceAllMapped(
+          RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.');
 
   @override
   Widget build(BuildContext context) {
@@ -86,20 +111,22 @@ class _PosShellState extends State<PosShell> {
   }
 
   Widget _sidebar() => Container(
-        width: 230,
+        width: 250,
         color: AppColors.surface,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
-              CircleAvatar(backgroundColor: AppColors.primary,
-                  child: const Icon(Icons.point_of_sale, color: Colors.white, size: 20)),
-              const SizedBox(width: 10),
+              CircleAvatar(
+                  radius: 24,
+                  backgroundColor: AppColors.primary,
+                  child: const Icon(Icons.point_of_sale, color: Colors.white, size: 26)),
+              const SizedBox(width: 12),
               const Expanded(
                 child: Text('Kasir Siswa',
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
               ),
             ]),
             const SizedBox(height: 28),
@@ -112,48 +139,71 @@ class _PosShellState extends State<PosShell> {
             _navItem(Icons.access_time, 'Shift Kasir'),
             const Spacer(),
             _navItem(Icons.settings, 'Pengaturan'),
+            const SizedBox(height: 8),
+            // Tombol fullscreen besar.
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(64, 56),
+                  side: const BorderSide(color: AppColors.border),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                onPressed: _toggleFullscreen,
+                icon: Icon(_fullscreen ? Icons.fullscreen_exit : Icons.fullscreen, size: 26),
+                label: Text(_fullscreen ? 'Keluar Layar Penuh' : 'Layar Penuh',
+                    style: const TextStyle(fontSize: 15)),
+              ),
+            ),
           ],
         ),
       );
 
   Widget _navItem(IconData icon, String label, {bool active = false}) => Container(
-        margin: const EdgeInsets.only(bottom: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: active ? AppColors.primaryLight : null,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(children: [
-          Icon(icon, size: 20, color: active ? AppColors.primary : AppColors.textMuted),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(label,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    color: active ? AppColors.primary : AppColors.textDark,
-                    fontWeight: active ? FontWeight.w600 : FontWeight.w400)),
+        margin: const EdgeInsets.only(bottom: 8),
+        child: Material(
+          color: active ? AppColors.primaryLight : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () {},
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Row(children: [
+                Icon(icon, size: 26, color: active ? AppColors.primary : AppColors.textMuted),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(label,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 16,
+                          color: active ? AppColors.primary : AppColors.textDark,
+                          fontWeight: active ? FontWeight.w700 : FontWeight.w500)),
+                ),
+              ]),
+            ),
           ),
-        ]),
+        ),
       );
 
   Widget _productArea() => Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Daftar Produk',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            const Text('Pilih produk untuk ditambahkan ke keranjang',
-                style: TextStyle(color: AppColors.textMuted)),
-            const SizedBox(height: 16),
+                style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            const Text('Sentuh produk untuk menambahkan ke keranjang',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 16)),
+            const SizedBox(height: 20),
             Expanded(
               child: GridView.builder(
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 180,
-                  childAspectRatio: 0.95,
-                  crossAxisSpacing: 14,
-                  mainAxisSpacing: 14,
+                  maxCrossAxisExtent: 230,
+                  childAspectRatio: 0.9,
+                  crossAxisSpacing: 18,
+                  mainAxisSpacing: 18,
                 ),
                 itemCount: products.length,
                 itemBuilder: (_, i) => _productCard(products[i]),
@@ -163,33 +213,34 @@ class _PosShellState extends State<PosShell> {
         ),
       );
 
-  Widget _productCard(Product p) => InkWell(
-        onTap: () => addToCart(p),
-        borderRadius: BorderRadius.circular(16),
-        child: Card(
+  Widget _productCard(Product p) => Card(
+        child: InkWell(
+          onTap: () => addToCart(p),
+          borderRadius: BorderRadius.circular(18),
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: Container(
+                    width: double.infinity,
                     decoration: BoxDecoration(
                       color: AppColors.bg,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Icon(Icons.fastfood, size: 40, color: AppColors.textMuted),
+                    child: const Icon(Icons.fastfood, size: 52, color: AppColors.textMuted),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 Text(p.name,
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                const SizedBox(height: 4),
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                const SizedBox(height: 6),
                 Text(rp(p.price),
-                    style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                    style: const TextStyle(
+                        color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 17)),
               ],
             ),
           ),
@@ -197,24 +248,25 @@ class _PosShellState extends State<PosShell> {
       );
 
   Widget _orderPanel() => Container(
-        width: 320,
+        width: 400,
         color: AppColors.surface,
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Pesanan',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const Text('Transaksi baru', style: TextStyle(color: AppColors.textMuted)),
-            const SizedBox(height: 16),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            const Text('Transaksi baru',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 15)),
+            const SizedBox(height: 18),
             Expanded(
               child: cart.isEmpty
                   ? const Center(
                       child: Text('Keranjang kosong',
-                          style: TextStyle(color: AppColors.textMuted)))
+                          style: TextStyle(color: AppColors.textMuted, fontSize: 16)))
                   : ListView.separated(
                       itemCount: cart.length,
-                      separatorBuilder: (_, __) => const Divider(),
+                      separatorBuilder: (_, __) => const Divider(height: 22),
                       itemBuilder: (_, i) {
                         final c = cart[i];
                         return Row(children: [
@@ -223,70 +275,87 @@ class _PosShellState extends State<PosShell> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(c.product.name,
-                                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w700, fontSize: 16)),
+                                const SizedBox(height: 2),
                                 Text(rp(c.product.price),
                                     style: const TextStyle(
-                                        color: AppColors.primary, fontSize: 12)),
+                                        color: AppColors.primary, fontSize: 14)),
                               ],
                             ),
                           ),
-                          IconButton(
-                              padding: EdgeInsets.zero,
-                              visualDensity: VisualDensity.compact,
-                              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                              onPressed: () => setState(() {
-                                    if (c.qty > 1) {
-                                      c.qty--;
-                                    } else {
-                                      cart.removeAt(i);
-                                    }
-                                  }),
-                              icon: const Icon(Icons.remove_circle_outline, size: 20)),
-                          SizedBox(width: 24, child: Text('${c.qty}', textAlign: TextAlign.center)),
-                          IconButton(
-                              padding: EdgeInsets.zero,
-                              visualDensity: VisualDensity.compact,
-                              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                              onPressed: () => setState(() => c.qty++),
-                              icon: const Icon(Icons.add_circle, size: 20, color: AppColors.primary)),
+                          _qtyBtn(Icons.remove, () => setState(() {
+                                if (c.qty > 1) {
+                                  c.qty--;
+                                } else {
+                                  cart.removeAt(i);
+                                }
+                              })),
+                          SizedBox(
+                              width: 38,
+                              child: Text('${c.qty}',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                      fontSize: 18, fontWeight: FontWeight.bold))),
+                          _qtyBtn(Icons.add, () => setState(() => c.qty++),
+                              primary: true),
                         ]);
                       },
                     ),
             ),
-            const Divider(),
+            const Divider(height: 28),
             _row('Subtotal', rp(subtotal)),
             _row('Pajak (11%)', rp(tax)),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             _row('Total', rp(total), bold: true),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                  minimumSize: const Size(64, 68),
                 ),
-                onPressed: cart.isEmpty ? null : () => _bayar(),
-                child: const Text('Bayar & Cetak Struk',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                onPressed: cart.isEmpty ? null : _bayar,
+                child: const Text('Bayar & Cetak Struk'),
               ),
             ),
           ],
         ),
       );
 
+  Widget _qtyBtn(IconData icon, VoidCallback onTap, {bool primary = false}) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: Material(
+          color: primary ? AppColors.primary : AppColors.bg,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: onTap,
+            child: SizedBox(
+              width: 46,
+              height: 46,
+              child: Icon(icon,
+                  size: 24, color: primary ? Colors.white : AppColors.textDark),
+            ),
+          ),
+        ),
+      );
+
   Widget _row(String l, String v, {bool bold = false}) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 5),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Text(l,
               style: TextStyle(
+                  fontSize: bold ? 20 : 16,
                   color: bold ? AppColors.textDark : AppColors.textMuted,
                   fontWeight: bold ? FontWeight.bold : FontWeight.normal)),
           Text(v,
-              style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.w600)),
+              style: TextStyle(
+                  fontSize: bold ? 22 : 16,
+                  fontWeight: bold ? FontWeight.bold : FontWeight.w600)),
         ]),
       );
 
@@ -295,9 +364,10 @@ class _PosShellState extends State<PosShell> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Transaksi Berhasil'),
-        content: Text('Total dibayar: ${rp(total)}'),
+        content: Text('Total dibayar: ${rp(total)}',
+            style: const TextStyle(fontSize: 18)),
         actions: [
-          TextButton(
+          ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
                 setState(() => cart.clear());
