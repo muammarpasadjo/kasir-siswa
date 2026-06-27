@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 import 'app/theme/app_theme.dart';
 import 'app/router/app_router.dart';
+import 'core/providers.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,6 +27,7 @@ class KasirSiswaApp extends ConsumerWidget {
   const KasirSiswaApp({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(themeProvider); // rebuild saat palet tema diganti
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
       title: 'Kasir Siswa',

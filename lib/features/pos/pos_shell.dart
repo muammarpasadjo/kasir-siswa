@@ -4,6 +4,7 @@ import 'package:window_manager/window_manager.dart';
 import '../../app/theme/app_colors.dart';
 import '../../core/providers.dart';
 import '../../core/database/database.dart';
+import '../products/products_page.dart';
 
 class PosShell extends ConsumerStatefulWidget {
   const PosShell({super.key});
@@ -19,7 +20,15 @@ class CartItem {
 
 class _PosShellState extends ConsumerState<PosShell> {
   bool _fullscreen = false;
+  String _query = '';
+  final _searchCtrl = TextEditingController();
   final List<CartItem> cart = [];
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _toggleFullscreen() async {
     _fullscreen = !_fullscreen;
@@ -38,14 +47,12 @@ class _PosShellState extends ConsumerState<PosShell> {
     });
   }
 
-  double get subtotal =>
-      cart.fold(0, (s, c) => s + c.product.sellPrice * c.qty);
+  double get subtotal => cart.fold(0, (s, c) => s + c.product.sellPrice * c.qty);
   double get tax => subtotal * 0.11;
   double get total => subtotal + tax;
 
-  String rp(num v) => 'Rp ' +
-      v.round().toString().replaceAllMapped(
-          RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.');
+  String rp(num v) =>
+      'Rp ${v.round().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
 
   @override
   Widget build(BuildContext context) {
@@ -84,11 +91,15 @@ class _PosShellState extends ConsumerState<PosShell> {
           const SizedBox(height: 28),
           _navItem(Icons.dashboard, 'Dashboard', active: true),
           _navItem(Icons.shopping_cart, 'Penjualan'),
-          _navItem(Icons.inventory_2, 'Produk'),
+          _navItem(Icons.inventory_2, 'Produk', onTap: () {
+            Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ProductsPage()));
+          }),
           _navItem(Icons.local_shipping, 'Pembelian'),
           _navItem(Icons.people, 'Member'),
           _navItem(Icons.bar_chart, 'Laporan'),
           _navItem(Icons.access_time, 'Shift Kasir'),
+          _navItem(Icons.palette, 'Tema Warna', onTap: _openThemePicker),
           const Spacer(),
           if (session != null)
             Padding(
@@ -144,14 +155,64 @@ class _PosShellState extends ConsumerState<PosShell> {
     );
   }
 
-  Widget _navItem(IconData icon, String label, {bool active = false}) => Container(
+  void _openThemePicker() {
+    final current = ref.read(themeProvider);
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Pilih Tema Warna'),
+        content: SizedBox(
+          width: 420,
+          child: GridView.count(
+            shrinkWrap: true,
+            crossAxisCount: 4,
+            mainAxisSpacing: 14,
+            crossAxisSpacing: 14,
+            children: [
+              for (int i = 0; i < appPalettes.length; i++)
+                InkWell(
+                  onTap: () {
+                    ref.read(themeProvider.notifier).setPalette(i);
+                    Navigator.pop(context);
+                  },
+                  child: Column(
+                    children: [
+                      Container(
+                        height: 54,
+                        decoration: BoxDecoration(
+                          color: appPalettes[i].primary,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: i == current ? AppColors.textDark : Colors.transparent,
+                            width: 3,
+                          ),
+                        ),
+                        child: i == current
+                            ? const Icon(Icons.check, color: Colors.white)
+                            : null,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(appPalettes[i].name, style: const TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _navItem(IconData icon, String label,
+          {bool active = false, VoidCallback? onTap}) =>
+      Container(
         margin: const EdgeInsets.only(bottom: 8),
         child: Material(
           color: active ? AppColors.primaryLight : Colors.transparent,
           borderRadius: BorderRadius.circular(14),
           child: InkWell(
             borderRadius: BorderRadius.circular(14),
-            onTap: () {},
+            onTap: onTap ?? () {},
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: Row(children: [
@@ -180,24 +241,64 @@ class _PosShellState extends ConsumerState<PosShell> {
         children: [
           const Text('Daftar Produk',
               style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 6),
-          const Text('Sentuh produk untuk menambahkan ke keranjang',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 16)),
-          const SizedBox(height: 20),
+          const SizedBox(height: 14),
+          // Pencarian barang
+          TextField(
+            controller: _searchCtrl,
+            style: const TextStyle(fontSize: 18),
+            onChanged: (v) => setState(() => _query = v.toLowerCase()),
+            decoration: InputDecoration(
+              hintText: 'Cari barang (nama / barcode)...',
+              prefixIcon: const Icon(Icons.search, size: 26),
+              suffixIcon: _query.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchCtrl.clear();
+                        setState(() => _query = '');
+                      },
+                    ),
+              filled: true,
+              fillColor: AppColors.surface,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
           Expanded(
             child: productsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Gagal memuat produk: $e')),
-              data: (items) => GridView.builder(
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 230,
-                  childAspectRatio: 0.9,
-                  crossAxisSpacing: 18,
-                  mainAxisSpacing: 18,
-                ),
-                itemCount: items.length,
-                itemBuilder: (_, i) => _productCard(items[i]),
-              ),
+              data: (all) {
+                final items = _query.isEmpty
+                    ? all
+                    : all.where((p) =>
+                        p.name.toLowerCase().contains(_query) ||
+                        (p.barcode ?? '').toLowerCase().contains(_query)).toList();
+                if (items.isEmpty) {
+                  return const Center(
+                      child: Text('Barang tidak ditemukan',
+                          style: TextStyle(color: AppColors.textMuted, fontSize: 16)));
+                }
+                return GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 230,
+                    childAspectRatio: 0.9,
+                    crossAxisSpacing: 18,
+                    mainAxisSpacing: 18,
+                  ),
+                  itemCount: items.length,
+                  itemBuilder: (_, i) => _productCard(items[i]),
+                );
+              },
             ),
           ),
         ],
@@ -231,8 +332,10 @@ class _PosShellState extends ConsumerState<PosShell> {
                     style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                 const SizedBox(height: 6),
                 Text(rp(p.sellPrice),
-                    style: const TextStyle(
-                        color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 17)),
+                    style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 17)),
               ],
             ),
           ),
@@ -272,7 +375,7 @@ class _PosShellState extends ConsumerState<PosShell> {
                                         fontWeight: FontWeight.w700, fontSize: 16)),
                                 const SizedBox(height: 2),
                                 Text(rp(c.product.sellPrice),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         color: AppColors.primary, fontSize: 14)),
                               ],
                             ),

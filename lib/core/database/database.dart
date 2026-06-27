@@ -186,6 +186,30 @@ class AppDatabase extends _$AppDatabase {
 
   Future<List<Product>> getActiveProducts() =>
       (select(products)..where((p) => p.isActive.equals(true))).get();
+
+  // ===== Settings =====
+  Future<String?> getSetting(String key) async {
+    final r = await (select(appSettings)..where((s) => s.key.equals(key)))
+        .getSingleOrNull();
+    return r?.value;
+  }
+
+  Future<void> setSetting(String key, String value) async {
+    await into(appSettings).insertOnConflictUpdate(
+        AppSettingsCompanion(key: Value(key), value: Value(value)));
+  }
+
+  // ===== Master Produk =====
+  Future<List<Category>> getCategories() => select(categories).get();
+
+  Future<int> addCategory(String name) =>
+      into(categories).insert(CategoriesCompanion.insert(name: name));
+
+  Future<int> upsertProduct(ProductsCompanion product) =>
+      into(products).insertOnConflictUpdate(product);
+
+  Future<void> deleteProductById(int id) =>
+      (delete(products)..where((t) => t.id.equals(id))).go();
 }
 
 LazyDatabase _open() {
