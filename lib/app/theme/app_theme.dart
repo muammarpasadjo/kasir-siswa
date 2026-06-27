@@ -10,7 +10,7 @@ class AppTheme {
         primary: AppColors.primary,
         surface: AppColors.surface,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0,
         color: AppColors.surface,
         shape: RoundedRectangleBorder(

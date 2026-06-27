@@ -96,8 +96,11 @@ class _PosShellState extends State<PosShell> {
               CircleAvatar(backgroundColor: AppColors.primary,
                   child: const Icon(Icons.point_of_sale, color: Colors.white, size: 20)),
               const SizedBox(width: 10),
-              const Text('Kasir Siswa',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const Expanded(
+                child: Text('Kasir Siswa',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              ),
             ]),
             const SizedBox(height: 28),
             _navItem(Icons.dashboard, 'Dashboard', active: true),
@@ -123,10 +126,13 @@ class _PosShellState extends State<PosShell> {
         child: Row(children: [
           Icon(icon, size: 20, color: active ? AppColors.primary : AppColors.textMuted),
           const SizedBox(width: 12),
-          Text(label,
-              style: TextStyle(
-                  color: active ? AppColors.primary : AppColors.textDark,
-                  fontWeight: active ? FontWeight.w600 : FontWeight.w400)),
+          Expanded(
+            child: Text(label,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    color: active ? AppColors.primary : AppColors.textDark,
+                    fontWeight: active ? FontWeight.w600 : FontWeight.w400)),
+          ),
         ]),
       );
 
@@ -225,6 +231,9 @@ class _PosShellState extends State<PosShell> {
                             ),
                           ),
                           IconButton(
+                              padding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
                               onPressed: () => setState(() {
                                     if (c.qty > 1) {
                                       c.qty--;
@@ -233,8 +242,11 @@ class _PosShellState extends State<PosShell> {
                                     }
                                   }),
                               icon: const Icon(Icons.remove_circle_outline, size: 20)),
-                          Text('${c.qty}'),
+                          SizedBox(width: 24, child: Text('${c.qty}', textAlign: TextAlign.center)),
                           IconButton(
+                              padding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
                               onPressed: () => setState(() => c.qty++),
                               icon: const Icon(Icons.add_circle, size: 20, color: AppColors.primary)),
                         ]);
